@@ -30,6 +30,7 @@
       background-color: #0f0f0f;
       border-bottom: 1px solid #272727;
       flex-shrink: 0;
+      gap: 15px;
     }
 
     .logo {
@@ -37,16 +38,52 @@
       font-weight: 800;
       letter-spacing: -0.5px;
       user-select: none;
+      flex-shrink: 0;
     }
 
     .logo span {
       color: #0084ff;
     }
 
+    /* Search Bar Styles */
+    .search-container {
+      display: flex;
+      align-items: center;
+      flex: 1;
+      max-width: 500px;
+      background: #121212;
+      border: 1px solid #323232;
+      border-radius: 20px;
+      padding: 4px 12px;
+      transition: border-color 0.2s;
+    }
+
+    .search-container:focus-within {
+      border-color: #0084ff;
+    }
+
+    .search-container input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-size: 0.95rem;
+      padding: 6px 8px;
+    }
+
+    .search-container svg {
+      fill: #888888;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
     .nav-actions {
       display: flex;
       gap: 10px;
       align-items: center;
+      flex-shrink: 0;
     }
 
     .btn-primary {
@@ -85,6 +122,13 @@
     .user-tag {
       font-size: 0.9rem;
       color: #aaa;
+    }
+
+    .error-msg {
+      color: #ff4d4d;
+      font-size: 0.85rem;
+      display: none;
+      word-break: break-word;
     }
 
     /* Modals */
@@ -338,6 +382,12 @@
       color: #0084ff;
       display: none;
     }
+
+    .no-results {
+      font-size: 0.9rem;
+      color: #888888;
+      padding: 12px 8px;
+    }
   </style>
 </head>
 <body>
@@ -345,6 +395,13 @@
   <!-- Top Navigation Header -->
   <header>
     <div class="logo"><span>K</span>VIDEOS</div>
+    
+    <!-- Real-time Search Bar -->
+    <div class="search-container">
+      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <input type="text" id="searchInput" placeholder="Search videos or channels..." />
+    </div>
+
     <div class="nav-actions">
       <span class="user-tag" id="userDisplay">Not logged in</span>
       <button class="btn-primary" id="authBtn">Sign In</button>
@@ -366,6 +423,8 @@
 
       <input type="email" id="authEmail" placeholder="Email Address" />
       <input type="password" id="authPassword" placeholder="Password" />
+      
+      <span class="error-msg" id="authError"></span>
 
       <div class="modal-actions">
         <button class="btn-cancel" id="closeAuthBtn">Cancel</button>
@@ -427,7 +486,7 @@
   <!-- Firebase Backend Script -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getDatabase, ref, push, onValue, runTransaction, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
@@ -450,6 +509,12 @@
     const INTRO_URL = "1000078015.mp4";
     let currentUser = null;
     let currentVideo = null;
+    let allVideos = []; // Cached video list for local search filtering
+
+    // Handle Redirect Auth Result
+    getRedirectResult(auth).catch((error) => {
+      showError(error.message);
+    });
 
     // Listen to User Login State
     onAuthStateChanged(auth, (user) => {
@@ -479,11 +544,24 @@
       }
     });
 
+    function showError(msg) {
+      const authError = document.getElementById('authError');
+      authError.textContent = msg;
+      authError.style.display = 'block';
+    }
+
+    function clearError() {
+      const authError = document.getElementById('authError');
+      authError.textContent = '';
+      authError.style.display = 'none';
+    }
+
     // Auth Actions
     document.getElementById('authBtn').onclick = () => {
       if (currentUser) {
         signOut(auth);
       } else {
+        clearError();
         document.getElementById('authModal').style.display = 'flex';
       }
     };
@@ -492,33 +570,50 @@
       document.getElementById('authModal').style.display = 'none';
     };
 
+    // Google Login
     document.getElementById('googleAuthBtn').onclick = async () => {
+      clearError();
       try {
         await signInWithPopup(auth, googleProvider);
         document.getElementById('authModal').style.display = 'none';
       } catch (err) {
-        alert(err.message);
+        if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
+          signInWithRedirect(auth, googleProvider);
+        } else {
+          showError(err.message);
+        }
       }
     };
 
+    // Email/Password Login & Register
     document.getElementById('submitAuthBtn').onclick = async () => {
-      const email = document.getElementById('authEmail').value;
+      clearError();
+      const email = document.getElementById('authEmail').value.trim();
       const password = document.getElementById('authPassword').value;
+
+      if (!email || !password) {
+        showError("Please enter both email and password.");
+        return;
+      }
 
       try {
         await signInWithEmailAndPassword(auth, email, password);
+        document.getElementById('authModal').style.display = 'none';
       } catch (err) {
-        try {
-          await createUserWithEmailAndPassword(auth, email, password);
-        } catch (createErr) {
-          alert(createErr.message);
-          return;
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+          try {
+            await createUserWithEmailAndPassword(auth, email, password);
+            document.getElementById('authModal').style.display = 'none';
+          } catch (createErr) {
+            showError(createErr.message);
+          }
+        } else {
+          showError(err.message);
         }
       }
-      document.getElementById('authModal').style.display = 'none';
     };
 
-    // 1. UPLOAD MP4 VIDEO FEATURE
+    // UPLOAD MP4 VIDEO
     document.getElementById('openUploadBtn').onclick = () => {
       document.getElementById('uploadModal').style.display = 'flex';
     };
@@ -564,14 +659,26 @@
       }
     };
 
-    // Render Video Feed
+    // Fetch and Store Videos from Firebase Realtime Database
     onValue(ref(db, 'videos'), (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        allVideos = [];
+      } else {
+        allVideos = Object.keys(data).map(key => ({ id: key, ...data[key] })).reverse();
+      }
+      renderVideoList(allVideos);
+    });
+
+    // Render Videos into Sidebar
+    function renderVideoList(videos) {
       const videoList = document.getElementById('videoList');
       videoList.innerHTML = '';
-      const data = snapshot.val();
-      if (!data) return;
 
-      const videos = Object.keys(data).map(key => ({ id: key, ...data[key] })).reverse();
+      if (videos.length === 0) {
+        videoList.innerHTML = `<div class="no-results">No videos found.</div>`;
+        return;
+      }
 
       videos.forEach((video) => {
         const card = document.createElement('div');
@@ -586,9 +693,26 @@
         card.onclick = () => playWithIntro(video);
         videoList.appendChild(card);
       });
-    });
+    }
 
-    // Play video with Intro Bumper
+    // SEARCH FEATURE FILTER
+    document.getElementById('searchInput').oninput = (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      
+      if (!query) {
+        renderVideoList(allVideos);
+        return;
+      }
+
+      const filtered = allVideos.filter(video => 
+        video.title.toLowerCase().includes(query) || 
+        video.author.toLowerCase().includes(query)
+      );
+
+      renderVideoList(filtered);
+    };
+
+    // Play Video with Intro Bumper
     function playWithIntro(video) {
       currentVideo = video;
       document.getElementById('currentTitle').textContent = video.title;
@@ -609,7 +733,7 @@
       if (currentUser) checkSubAndLikeState();
     }
 
-    // 2. LIKE FEATURE
+    // LIKE FEATURE
     document.getElementById('likeBtn').onclick = () => {
       if (!currentUser || !currentVideo) return;
       const userLikeRef = ref(db, `userLikes/${currentUser.uid}/${currentVideo.id}`);
@@ -617,11 +741,9 @@
 
       onValue(userLikeRef, (snapshot) => {
         if (snapshot.exists()) {
-          // Unlike video
           remove(userLikeRef);
           runTransaction(videoLikesCountRef, (count) => (count || 1) - 1);
         } else {
-          // Like video
           set(userLikeRef, true);
           runTransaction(videoLikesCountRef, (count) => (count || 0) + 1);
         }
@@ -634,7 +756,7 @@
       });
     }
 
-    // 3. SUBSCRIBE FEATURE
+    // SUBSCRIBE FEATURE
     document.getElementById('subBtn').onclick = () => {
       if (!currentUser || !currentVideo) return;
       const authorUid = currentVideo.authorUid || currentVideo.author;
@@ -652,7 +774,6 @@
     function checkSubAndLikeState() {
       if (!currentUser || !currentVideo) return;
 
-      // Check Sub status
       const authorUid = currentVideo.authorUid || currentVideo.author;
       onValue(ref(db, `subscriptions/${currentUser.uid}/${authorUid}`), (snapshot) => {
         const subBtn = document.getElementById('subBtn');
@@ -665,7 +786,6 @@
         }
       });
 
-      // Check Like status
       onValue(ref(db, `userLikes/${currentUser.uid}/${currentVideo.id}`), (snapshot) => {
         const likeBtn = document.getElementById('likeBtn');
         if (snapshot.exists()) {
@@ -676,7 +796,7 @@
       });
     }
 
-    // 4. COMMENT FEATURE
+    // COMMENT FEATURE
     document.getElementById('postCommentBtn').onclick = () => {
       const text = document.getElementById('commentText').value.trim();
       if (!text || !currentVideo || !currentUser) return;
@@ -703,4 +823,14 @@
           const item = document.createElement('div');
           item.className = 'comment-item';
           item.innerHTML = `<div class="comment-user">${escapeHtml(c.user)}</div><div>${escapeHtml(c.text)}</div>`;
-        
+          commentsList.appendChild(item);
+        });
+      });
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+  </script>
+</body>
+</html>

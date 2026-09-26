@@ -45,7 +45,7 @@
       color: #0084ff;
     }
 
-    /* Search Bar Styles */
+    /* Search Bar */
     .search-container {
       display: flex;
       align-items: center;
@@ -81,7 +81,7 @@
 
     .nav-actions {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       align-items: center;
       flex-shrink: 0;
     }
@@ -121,7 +121,17 @@
 
     .user-tag {
       font-size: 0.9rem;
-      color: #aaa;
+      color: #3ea6ff;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 12px;
+      background: #1a2733;
+      transition: background 0.2s;
+    }
+
+    .user-tag:hover {
+      background: #243547;
     }
 
     .error-msg {
@@ -189,6 +199,50 @@
       cursor: pointer;
     }
 
+    /* Profile Modal Styling */
+    .profile-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 10px;
+    }
+
+    .profile-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #0084ff;
+      color: white;
+      font-size: 2rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 6px;
+    }
+
+    .profile-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .profile-username {
+      font-size: 0.95rem;
+      color: #aaa;
+    }
+
+    .profile-stats {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: #141414;
+      border-radius: 8px;
+      width: 100%;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-around;
+    }
+
     /* Main Container */
     main {
       display: grid;
@@ -246,6 +300,19 @@
       display: flex;
       align-items: center;
       gap: 12px;
+    }
+
+    .author-clickable {
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1.05rem;
+      color: #ffffff;
+      text-decoration: none;
+    }
+
+    .author-clickable:hover {
+      text-decoration: underline;
+      color: #0084ff;
     }
 
     .btn-sub {
@@ -326,6 +393,11 @@
       font-weight: bold;
       color: #0084ff;
       margin-bottom: 4px;
+      cursor: pointer;
+    }
+
+    .comment-user:hover {
+      text-decoration: underline;
     }
 
     /* Sidebar Feed */
@@ -403,7 +475,7 @@
     </div>
 
     <div class="nav-actions">
-      <span class="user-tag" id="userDisplay">Not logged in</span>
+      <span class="user-tag" id="userDisplay" style="display:none;">@username</span>
       <button class="btn-primary" id="authBtn">Sign In</button>
       <button class="btn-primary" id="openUploadBtn" style="display:none;">+ Upload Video</button>
     </div>
@@ -433,6 +505,36 @@
     </div>
   </div>
 
+  <!-- Setup Username Modal -->
+  <div class="modal" id="usernameModal">
+    <div class="modal-content">
+      <h3>Set Your Username</h3>
+      <p style="font-size:0.85rem; color:#aaa;">Choose a unique handle for your profile and comments.</p>
+      <input type="text" id="newUsernameInput" placeholder="e.g. video_creator99" />
+      <span class="error-msg" id="usernameError"></span>
+      <div class="modal-actions">
+        <button class="btn-primary" id="saveUsernameBtn">Save Username</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Viewer Modal -->
+  <div class="modal" id="profileModal">
+    <div class="modal-content">
+      <div class="profile-card">
+        <div class="profile-avatar" id="profAvatar">?</div>
+        <div class="profile-name" id="profDisplayName">User Profile</div>
+        <div class="profile-username" id="profHandle">@username</div>
+        <div class="profile-stats">
+          <div><strong id="profVideoCount">0</strong> Videos</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="closeProfileBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Upload Modal -->
   <div class="modal" id="uploadModal">
     <div class="modal-content">
@@ -457,7 +559,7 @@
         <h2 class="video-title" id="currentTitle">Select a video to play</h2>
         <div class="video-header">
           <div class="author-sub">
-            <span id="currentAuthor" style="font-weight: bold; font-size: 1.05rem;"></span>
+            <span id="currentAuthor" class="author-clickable"></span>
             <button class="btn-sub" id="subBtn" style="display:none;">Subscribe</button>
           </div>
           <div class="interaction-bar">
@@ -486,8 +588,8 @@
   <!-- Firebase Backend Script -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getDatabase, ref, push, onValue, runTransaction, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getDatabase, ref, push, onValue, runTransaction, set, remove, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
     const firebaseConfig = {
@@ -509,15 +611,12 @@
     const INTRO_URL = "1000078015.mp4";
     let currentUser = null;
     let currentVideo = null;
-    let allVideos = []; // Cached video list for local search filtering
+    let allVideos = [];
 
-    // Handle Redirect Auth Result
-    getRedirectResult(auth).catch((error) => {
-      showError(error.message);
-    });
+    getRedirectResult(auth).catch((error) => showError(error.message));
 
     // Listen to User Login State
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
       currentUser = user;
       const userDisplay = document.getElementById('userDisplay');
       const authBtn = document.getElementById('authBtn');
@@ -527,7 +626,18 @@
       const subBtn = document.getElementById('subBtn');
 
       if (user) {
-        userDisplay.textContent = user.displayName || user.email.split('@')[0];
+        // Fetch extended user data from DB
+        const userSnap = await get(ref(db, `users/${user.uid}`));
+        const userData = userSnap.val();
+
+        if (!userData || !userData.username) {
+          // Open username modal if missing
+          document.getElementById('usernameModal').style.display = 'flex';
+        } else {
+          userDisplay.textContent = `@${userData.username}`;
+          userDisplay.style.display = 'inline-block';
+        }
+
         authBtn.textContent = "Sign Out";
         openUploadBtn.style.display = "inline-block";
         commentBox.style.display = "flex";
@@ -535,7 +645,7 @@
         subBtn.style.display = "inline-block";
         if (currentVideo) checkSubAndLikeState();
       } else {
-        userDisplay.textContent = "Not logged in";
+        userDisplay.style.display = 'none';
         authBtn.textContent = "Sign In";
         openUploadBtn.style.display = "none";
         commentBox.style.display = "none";
@@ -543,6 +653,67 @@
         subBtn.style.display = "none";
       }
     });
+
+    // Save New Username Functionality
+    document.getElementById('saveUsernameBtn').onclick = async () => {
+      const usernameInput = document.getElementById('newUsernameInput').value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const errEl = document.getElementById('usernameError');
+
+      if (!usernameInput || usernameInput.length < 3) {
+        errEl.textContent = "Username must be at least 3 alphanumeric characters.";
+        errEl.style.display = 'block';
+        return;
+      }
+
+      try {
+        await set(ref(db, `users/${currentUser.uid}`), {
+          username: usernameInput,
+          displayName: currentUser.displayName || usernameInput,
+          email: currentUser.email
+        });
+
+        await updateProfile(currentUser, { displayName: usernameInput });
+
+        document.getElementById('userDisplay').textContent = `@${usernameInput}`;
+        document.getElementById('userDisplay').style.display = 'inline-block';
+        document.getElementById('usernameModal').style.display = 'none';
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.style.display = 'block';
+      }
+    };
+
+    // Open User's Profile Modal
+    document.getElementById('userDisplay').onclick = () => {
+      if (currentUser) viewProfile(currentUser.uid);
+    };
+
+    // View Profile Modal Logic
+    async function viewProfile(uid) {
+      try {
+        const userSnap = await get(ref(db, `users/${uid}`));
+        const userData = userSnap.val() || {};
+        
+        const handle = userData.username ? `@${userData.username}` : '@user';
+        const name = userData.displayName || userData.username || "KVideos User";
+
+        document.getElementById('profAvatar').textContent = name.charAt(0).toUpperCase();
+        document.getElementById('profDisplayName').textContent = name;
+        document.getElementById('profHandle').textContent = handle;
+
+        // Calculate total uploads
+        const userVideos = allVideos.filter(v => v.authorUid === uid);
+        document.getElementById('profVideoCount').textContent = userVideos.length;
+
+        document.getElementById('profileModal').style.display = 'flex';
+      } catch (err) {
+        alert("Unable to load user profile.");
+      }
+    }
+
+    document.getElementById('closeProfileBtn').onclick = () => {
+      document.getElementById('profileModal').style.display = 'none';
+    };
 
     function showError(msg) {
       const authError = document.getElementById('authError');
@@ -585,7 +756,7 @@
       }
     };
 
-    // Email/Password Login & Register
+    // Email/Password Login
     document.getElementById('submitAuthBtn').onclick = async () => {
       clearError();
       const email = document.getElementById('authEmail').value.trim();
@@ -659,18 +830,13 @@
       }
     };
 
-    // Fetch and Store Videos from Firebase Realtime Database
+    // Database Video Listener
     onValue(ref(db, 'videos'), (snapshot) => {
       const data = snapshot.val();
-      if (!data) {
-        allVideos = [];
-      } else {
-        allVideos = Object.keys(data).map(key => ({ id: key, ...data[key] })).reverse();
-      }
+      allVideos = !data ? [] : Object.keys(data).map(key => ({ id: key, ...data[key] })).reverse();
       renderVideoList(allVideos);
     });
 
-    // Render Videos into Sidebar
     function renderVideoList(videos) {
       const videoList = document.getElementById('videoList');
       videoList.innerHTML = '';
@@ -687,7 +853,7 @@
           <div class="thumb">KV</div>
           <div class="card-meta">
             <div class="card-title">${escapeHtml(video.title)}</div>
-            <div class="card-author">${escapeHtml(video.author)}</div>
+            <div class="card-author">@${escapeHtml(video.author)}</div>
           </div>
         `;
         card.onclick = () => playWithIntro(video);
@@ -695,10 +861,9 @@
       });
     }
 
-    // SEARCH FEATURE FILTER
+    // Search Filter
     document.getElementById('searchInput').oninput = (e) => {
       const query = e.target.value.toLowerCase().trim();
-      
       if (!query) {
         renderVideoList(allVideos);
         return;
@@ -712,11 +877,16 @@
       renderVideoList(filtered);
     };
 
-    // Play Video with Intro Bumper
+    // Play Video + Intro
     function playWithIntro(video) {
       currentVideo = video;
       document.getElementById('currentTitle').textContent = video.title;
-      document.getElementById('currentAuthor').textContent = video.author;
+      
+      const authorEl = document.getElementById('currentAuthor');
+      authorEl.textContent = `@${video.author}`;
+      authorEl.onclick = () => {
+        if (video.authorUid) viewProfile(video.authorUid);
+      };
 
       const mainPlayer = document.getElementById('mainPlayer');
       mainPlayer.src = INTRO_URL;
@@ -805,6 +975,7 @@
 
       push(ref(db, `comments/${currentVideo.id}`), {
         user: username,
+        uid: currentUser.uid,
         text: text,
         timestamp: Date.now()
       });
@@ -822,7 +993,19 @@
         Object.values(data).forEach(c => {
           const item = document.createElement('div');
           item.className = 'comment-item';
-          item.innerHTML = `<div class="comment-user">${escapeHtml(c.user)}</div><div>${escapeHtml(c.text)}</div>`;
+          
+          const userSpan = document.createElement('div');
+          userSpan.className = 'comment-user';
+          userSpan.textContent = `@${c.user}`;
+          if (c.uid) {
+            userSpan.onclick = () => viewProfile(c.uid);
+          }
+
+          const textSpan = document.createElement('div');
+          textSpan.textContent = c.text;
+
+          item.appendChild(userSpan);
+          item.appendChild(textSpan);
           commentsList.appendChild(item);
         });
       });

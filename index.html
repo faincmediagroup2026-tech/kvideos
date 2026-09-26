@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KVideos</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: #0f0f0f;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Top Navbar */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background-color: #0f0f0f;
+      border-bottom: 1px solid #272727;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      user-select: none;
+    }
+
+    .logo span {
+      color: #0084ff;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn-primary {
+      background-color: #0084ff;
+      color: #ffffff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      background-color: #0066cc;
+    }
+
+    .btn-google {
+      background-color: #ffffff;
+      color: #000000;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-google:hover {
+      background-color: #e6e6e6;
+    }
+
+    .user-tag {
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+
+    /* Modals */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+    }
+
+    .modal-content {
+      background: #212121;
+      padding: 24px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal-content h3 {
+      font-size: 1.2rem;
+    }
+
+    .modal-content input {
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid #3d3d3d;
+      background: #0f0f0f;
+      color: #ffffff;
+      outline: none;
+    }
+
+    .divider {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #777;
+      margin: 4px 0;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .btn-cancel {
+      background: #3d3d3d;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    /* Main Container */
+    main {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .player-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .video-wrapper {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000000;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .video-info {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .video-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .author-sub {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-sub {
+      background: #ffffff;
+      color: #000000;
+      border: none;
+      padding: 6px 16px;
+      border-radius: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-sub.subscribed {
+      background: #3d3d3d;
+      color: #ffffff;
+    }
+
+    .interaction-bar {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-like {
+      background: #272727;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+
+    .btn-like.liked {
+      background: #0084ff;
+    }
+
+    /* Comments Section */
+    .comments-section {
+      margin-top: 20px;
+      border-top: 1px solid #272727;
+      padding-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .comment-input-box {
+      display: flex;
+      gap: 10px;
+    }
+
+    .comment-input-box input {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid #3d3d3d;
+      background: #141414;
+      color: white;
+      outline: none;
+    }
+
+    .comment-input-box input:focus {
+      border-color: #0084ff;
+    }
+
+    .comment-item {
+      background: #181818;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    .comment-user {
+      font-weight: bold;
+      color: #0084ff;
+      margin-bottom: 4px;
+    }
+
+    /* Sidebar Feed */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .video-card {
+      display: flex;
+      gap: 12px;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+
+    .video-card:hover {
+      background: #272727;
+    }
+
+    .thumb {
+      width: 120px;
+      aspect-ratio: 16 / 9;
+      background: #1f1f1f;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #0084ff;
+      flex-shrink: 0;
+    }
+
+    .card-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .card-author {
+      font-size: 0.8rem;
+      color: #aaa;
+    }
+
+    .upload-progress {
+      font-size: 0.85rem;
+      color: #0084ff;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="logo"><span>K</span>VIDEOS</div>
+    <div class="nav-actions">
+      <span class="user-tag" id="userDisplay">Not logged in</span>
+      <button class="btn-primary" id="authBtn">Sign In</button>
+      <button class="btn-primary" id="openUploadBtn" style="display:none;">+ Upload Video</button>
+    </div>
+  </header>
+
+  <!-- Login/Auth Modal -->
+  <div class="modal" id="authModal">
+    <div class="modal-content">
+      <h3 id="authTitle">Sign In to KVideos</h3>
+      
+      <button class="btn-google" id="googleAuthBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+        Sign in with Google
+      </button>
+
+      <div class="divider">OR</div>
+
+      <input type="email" id="authEmail" placeholder="Email Address" />
+      <input type="password" id="authPassword" placeholder="Password" />
+
+      <div class="modal-actions">
+        <button class="btn-cancel" id="closeAuthBtn">Cancel</button>
+        <button class="btn-primary" id="submitAuthBtn">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Modal -->
+  <div class="modal" id="uploadModal">
+    <div class="modal-content">
+      <h3>Upload MP4 Video</h3>
+      <input type="text" id="videoTitle" placeholder="Video Title" />
+      <input type="file" id="videoFile" accept="video/mp4" />
+      <span class="upload-progress" id="uploadStatus">Uploading video... Please wait.</span>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="closeUploadBtn">Cancel</button>
+        <button class="btn-primary" id="submitUploadBtn">Upload</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Player Layout -->
+  <main>
+    <section class="player-section">
+      <div class="video-wrapper">
+        <video id="mainPlayer" controls></video>
+      </div>
+      <div class="video-info">
+        <h2 class="video-title" id="currentTitle">Select a video to play</h2>
+        <div class="video-header">
+          <div class="author-sub">
+            <span id="currentAuthor" style="font-weight: bold; font-size: 1.05rem;"></span>
+            <button class="btn-sub" id="subBtn" style="display:none;">Subscribe</button>
+          </div>
+          <div class="interaction-bar">
+            <button class="btn-like" id="likeBtn" style="display:none;">
+              👍 <span id="likeCount">0</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Comments -->
+      <div class="comments-section">
+        <h3>Comments</h3>
+        <div class="comment-input-box" id="commentBox" style="display:none;">
+          <input type="text" id="commentText" placeholder="Add a public comment..." />
+          <button class="btn-primary" id="postCommentBtn">Comment</button>
+        </div>
+        <div id="commentsList"></div>
+      </div>
+    </section>
+
+    <!-- Up Next Sidebar -->
+    <aside class="sidebar" id="videoList"></aside>
+  </main>
+
+  <!-- Firebase Backend Script -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getDatabase, ref, push, onValue, runTransaction, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDYDZc0OWUHbRioKZLm5M8Erfw8ChS_d1M",
+      authDomain: "kvideos-20bf3.firebaseapp.com",
+      databaseURL: "https://kvideos-20bf3-default-rtdb.firebaseio.com",
+      projectId: "kvideos-20bf3",
+      storageBucket: "kvideos-20bf3.firebasestorage.app",
+      messagingSenderId: "657053829315",
+      appId: "1:657053829315:web:a6767ded689ca0ad1aba76"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+    const storage = getStorage(app);
+    const googleProvider = new GoogleAuthProvider();
+
+    const INTRO_URL = "1000078015.mp4";
+    let currentUser = null;
+    let currentVideo = null;
+
+    // Listen to User Login State
+    onAuthStateChanged(auth, (user) => {
+      currentUser = user;
+      const userDisplay = document.getElementById('userDisplay');
+      const authBtn = document.getElementById('authBtn');
+      const openUploadBtn = document.getElementById('openUploadBtn');
+      const commentBox = document.getElementById('commentBox');
+      const likeBtn = document.getElementById('likeBtn');
+      const subBtn = document.getElementById('subBtn');
+
+      if (user) {
+        userDisplay.textContent = user.displayName || user.email.split('@')[0];
+        authBtn.textContent = "Sign Out";
+        openUploadBtn.style.display = "inline-block";
+        commentBox.style.display = "flex";
+        likeBtn.style.display = "flex";
+        subBtn.style.display = "inline-block";
+        if (currentVideo) checkSubAndLikeState();
+      } else {
+        userDisplay.textContent = "Not logged in";
+        authBtn.textContent = "Sign In";
+        openUploadBtn.style.display = "none";
+        commentBox.style.display = "none";
+        likeBtn.style.display = "none";
+        subBtn.style.display = "none";
+      }
+    });
+
+    // Auth Actions
+    document.getElementById('authBtn').onclick = () => {
+      if (currentUser) {
+        signOut(auth);
+      } else {
+        document.getElementById('authModal').style.display = 'flex';
+      }
+    };
+
+    document.getElementById('closeAuthBtn').onclick = () => {
+      document.getElementById('authModal').style.display = 'none';
+    };
+
+    document.getElementById('googleAuthBtn').onclick = async () => {
+      try {
+        await signInWithPopup(auth, googleProvider);
+        document.getElementById('authModal').style.display = 'none';
+      } catch (err) {
+        alert(err.message);
+      }
+    };
+
+    document.getElementById('submitAuthBtn').onclick = async () => {
+      const email = document.getElementById('authEmail').value;
+      const password = document.getElementById('authPassword').value;
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (err) {
+        try {
+          await createUserWithEmailAndPassword(auth, email, password);
+        } catch (createErr) {
+          alert(createErr.message);
+          return;
+        }
+      }
+      document.getElementById('authModal').style.display = 'none';
+    };
+
+    // 1. UPLOAD MP4 VIDEO FEATURE
+    document.getElementById('openUploadBtn').onclick = () => {
+      document.getElementById('uploadModal').style.display = 'flex';
+    };
+
+    document.getElementById('closeUploadBtn').onclick = () => {
+      document.getElementById('uploadModal').style.display = 'none';
+    };
+
+    document.getElementById('submitUploadBtn').onclick = async () => {
+      const title = document.getElementById('videoTitle').value.trim();
+      const file = document.getElementById('videoFile').files[0];
+      const status = document.getElementById('uploadStatus');
+
+      if (!title || !file || file.type !== 'video/mp4') {
+        alert("Please enter a title and select an MP4 video file.");
+        return;
+      }
+
+      try {
+        status.style.display = 'block';
+        const fileRef = storageRef(storage, `videos/${Date.now()}_${file.name}`);
+        await uploadBytes(fileRef, file);
+        const downloadURL = await getDownloadURL(fileRef);
+
+        const channelName = currentUser.displayName || currentUser.email.split('@')[0];
+
+        push(ref(db, 'videos'), {
+          title: title,
+          author: channelName,
+          authorUid: currentUser.uid,
+          url: downloadURL,
+          likesCount: 0,
+          timestamp: Date.now()
+        });
+
+        status.style.display = 'none';
+        document.getElementById('uploadModal').style.display = 'none';
+        document.getElementById('videoTitle').value = '';
+        document.getElementById('videoFile').value = '';
+      } catch (err) {
+        alert("Upload failed: " + err.message);
+        status.style.display = 'none';
+      }
+    };
+
+    // Render Video Feed
+    onValue(ref(db, 'videos'), (snapshot) => {
+      const videoList = document.getElementById('videoList');
+      videoList.innerHTML = '';
+      const data = snapshot.val();
+      if (!data) return;
+
+      const videos = Object.keys(data).map(key => ({ id: key, ...data[key] })).reverse();
+
+      videos.forEach((video) => {
+        const card = document.createElement('div');
+        card.className = 'video-card';
+        card.innerHTML = `
+          <div class="thumb">KV</div>
+          <div class="card-meta">
+            <div class="card-title">${escapeHtml(video.title)}</div>
+            <div class="card-author">${escapeHtml(video.author)}</div>
+          </div>
+        `;
+        card.onclick = () => playWithIntro(video);
+        videoList.appendChild(card);
+      });
+    });
+
+    // Play video with Intro Bumper
+    function playWithIntro(video) {
+      currentVideo = video;
+      document.getElementById('currentTitle').textContent = video.title;
+      document.getElementById('currentAuthor').textContent = video.author;
+
+      const mainPlayer = document.getElementById('mainPlayer');
+      mainPlayer.src = INTRO_URL;
+      mainPlayer.play().catch(() => {});
+
+      mainPlayer.onended = () => {
+        mainPlayer.src = video.url;
+        mainPlayer.onended = null;
+        mainPlayer.play();
+      };
+
+      loadLikes(video.id);
+      loadComments(video.id);
+      if (currentUser) checkSubAndLikeState();
+    }
+
+    // 2. LIKE FEATURE
+    document.getElementById('likeBtn').onclick = () => {
+      if (!currentUser || !currentVideo) return;
+      const userLikeRef = ref(db, `userLikes/${currentUser.uid}/${currentVideo.id}`);
+      const videoLikesCountRef = ref(db, `videos/${currentVideo.id}/likesCount`);
+
+      onValue(userLikeRef, (snapshot) => {
+        if (snapshot.exists()) {
+          // Unlike video
+          remove(userLikeRef);
+          runTransaction(videoLikesCountRef, (count) => (count || 1) - 1);
+        } else {
+          // Like video
+          set(userLikeRef, true);
+          runTransaction(videoLikesCountRef, (count) => (count || 0) + 1);
+        }
+      }, { onlyOnce: true });
+    };
+
+    function loadLikes(videoId) {
+      onValue(ref(db, `videos/${videoId}/likesCount`), (snapshot) => {
+        document.getElementById('likeCount').textContent = snapshot.val() || 0;
+      });
+    }
+
+    // 3. SUBSCRIBE FEATURE
+    document.getElementById('subBtn').onclick = () => {
+      if (!currentUser || !currentVideo) return;
+      const authorUid = currentVideo.authorUid || currentVideo.author;
+      const subRef = ref(db, `subscriptions/${currentUser.uid}/${authorUid}`);
+
+      onValue(subRef, (snapshot) => {
+        if (snapshot.exists()) {
+          remove(subRef);
+        } else {
+          set(subRef, true);
+        }
+      }, { onlyOnce: true });
+    };
+
+    function checkSubAndLikeState() {
+      if (!currentUser || !currentVideo) return;
+
+      // Check Sub status
+      const authorUid = currentVideo.authorUid || currentVideo.author;
+      onValue(ref(db, `subscriptions/${currentUser.uid}/${authorUid}`), (snapshot) => {
+        const subBtn = document.getElementById('subBtn');
+        if (snapshot.exists()) {
+          subBtn.classList.add('subscribed');
+          subBtn.textContent = 'Subscribed';
+        } else {
+          subBtn.classList.remove('subscribed');
+          subBtn.textContent = 'Subscribe';
+        }
+      });
+
+      // Check Like status
+      onValue(ref(db, `userLikes/${currentUser.uid}/${currentVideo.id}`), (snapshot) => {
+        const likeBtn = document.getElementById('likeBtn');
+        if (snapshot.exists()) {
+          likeBtn.classList.add('liked');
+        } else {
+          likeBtn.classList.remove('liked');
+        }
+      });
+    }
+
+    // 4. COMMENT FEATURE
+    document.getElementById('postCommentBtn').onclick = () => {
+      const text = document.getElementById('commentText').value.trim();
+      if (!text || !currentVideo || !currentUser) return;
+
+      const username = currentUser.displayName || currentUser.email.split('@')[0];
+
+      push(ref(db, `comments/${currentVideo.id}`), {
+        user: username,
+        text: text,
+        timestamp: Date.now()
+      });
+
+      document.getElementById('commentText').value = '';
+    };
+
+    function loadComments(videoId) {
+      onValue(ref(db, `comments/${videoId}`), (snapshot) => {
+        const commentsList = document.getElementById('commentsList');
+        commentsList.innerHTML = '';
+        const data = snapshot.val();
+        if (!data) return;
+
+        Object.values(data).forEach(c => {
+          const item = document.createElement('div');
+          item.className = 'comment-item';
+          item.innerHTML = `<div class="comment-user">${escapeHtml(c.user)}</div><div>${escapeHtml(c.text)}</div>`;
+        
